@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checklist de Configuração MikroTik</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#111a2b;
+      --panel-2:#172238;
+      --text:#f3f6fb;
+      --muted:#9fb0c8;
+      --accent:#22c55e;
+      --accent-2:#16a34a;
+      --border:#263550;
+      --warning:#f59e0b;
+      --danger:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:linear-gradient(180deg,#09101c,#0e1728);
+      color:var(--text);
+      min-height:100vh;
+    }
+    .app{
+      max-width:980px;
+      margin:0 auto;
+      padding:20px;
+    }
+    header{
+      position:sticky;
+      top:0;
+      z-index:10;
+      background:rgba(11,18,32,.94);
+      backdrop-filter:blur(10px);
+      padding:16px 0 14px;
+      border-bottom:1px solid var(--border);
+    }
+    h1{
+      margin:0 0 6px;
+      font-size:clamp(1.45rem,4vw,2.1rem);
+    }
+    .subtitle{color:var(--muted);font-size:.95rem}
+    .progress-wrap{
+      margin-top:16px;
+      background:#09101c;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+    }
+    .progress-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:8px;
+      font-weight:700;
+    }
+    .progress{
+      width:100%;
+      height:14px;
+      background:#202c42;
+      border-radius:999px;
+      overflow:hidden;
+    }
+    .bar{
+      width:0%;
+      height:100%;
+      background:linear-gradient(90deg,var(--accent-2),var(--accent));
+      transition:width .25s ease;
+    }
+    .toolbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin:14px 0 2px;
+    }
+    button{
+      border:1px solid var(--border);
+      background:var(--panel-2);
+      color:var(--text);
+      border-radius:10px;
+      padding:10px 14px;
+      font-weight:700;
+      cursor:pointer;
+    }
+    button:hover{filter:brightness(1.1)}
+    button.danger{border-color:#6e2930;color:#ffc7cc}
+    main{padding-top:18px}
+    .section-title{
+      color:#c9d7e8;
+      font-size:.95rem;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      margin:25px 0 10px;
+    }
+    .item{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:16px;
+      margin-bottom:12px;
+      overflow:hidden;
+      box-shadow:0 8px 24px rgba(0,0,0,.12);
+    }
+    .item.done{border-color:#245f3b}
+    .item-head{
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      align-items:center;
+      gap:12px;
+      padding:15px;
+    }
+    .check{
+      width:24px;
+      height:24px;
+      accent-color:var(--accent);
+      cursor:pointer;
+    }
+    .item-title{
+      font-size:1rem;
+      font-weight:800;
+      line-height:1.3;
+    }
+    .item.done .item-title{
+      text-decoration:line-through;
+      color:#8fb89f;
+    }
+    .toggle{
+      min-width:92px;
+      padding:8px 10px;
+      font-size:.85rem;
+    }
+    .details{
+      display:none;
+      padding:0 16px 16px 52px;
+      color:#dbe6f5;
+      line-height:1.55;
+    }
+    .details.open{display:block}
+    .details ol{margin:8px 0 0;padding-left:20px}
+    .details li{margin:8px 0}
+    .path{
+      display:inline-block;
+      background:#0b1322;
+      border:1px solid var(--border);
+      border-radius:7px;
+      padding:2px 7px;
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+      font-size:.88rem;
+      color:#d8e7ff;
+    }
+    .note{
+      margin-top:10px;
+      padding:10px 12px;
+      border-left:4px solid var(--warning);
+      background:#211b10;
+      border-radius:8px;
+      color:#f7deb0;
+    }
+    .success{
+      border-left-color:var(--accent);
+      background:#102017;
+      color:#c9f5d8;
+    }
+    footer{
+      text-align:center;
+      color:var(--muted);
+      padding:28px 0 40px;
+      font-size:.86rem;
+    }
+    @media(max-width:640px){
+      .app{padding:12px}
+      .item-head{grid-template-columns:auto 1fr}
+      .toggle{grid-column:2;width:100%;margin-top:4px}
+      .details{padding:0 14px 14px 14px}
+      header{padding-top:10px}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Checklist de Configuração MikroTik</h1>
+    <div class="subtitle">RouterOS v7 • configuração inicial, internet, rede local e segurança</div>
+
+    <div class="progress-wrap">
+      <div class="progress-top">
+        <span>Progresso da configuração</span>
+        <span id="percent">0%</span>
+      </div>
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="subtitle" id="counter" style="margin-top:7px">0 de 0 etapas concluídas</div>
+    </div>
+
+    <div class="toolbar">
+      <button onclick="expandAll()">Abrir todos</button>
+      <button onclick="collapseAll()">Fechar todos</button>
+      <button class="danger" onclick="resetChecklist()">Zerar checklist</button>
+    </div>
+  </header>
+
+  <main id="checklist"></main>
+
+  <footer>
+    O progresso fica salvo automaticamente neste navegador.
+  </footer>
+</div>
+
+<script>
+const sections = [
+{
+  title:"Preparação e acesso",
+  items:[
+    {
+      title:"Identificar as portas WAN e LAN",
+      steps:[
+        "Defina qual porta receberá a internet. Exemplo: <span class='path'>ether1</span> como WAN.",
+        "Defina quais portas serão usadas na rede interna. Exemplo: <span class='path'>ether2 a ether5</span> como LAN.",
+        "Conecte o cabo do modem ou ONU na porta WAN.",
+        "Conecte o computador em uma porta LAN.",
+        "Durante a configuração, evite ligar o MikroTik diretamente em uma rede de produção sem antes revisar os endereços IP."
+      ]
+    },
+    {
+      title:"Acessar o MikroTik pelo WinBox usando o MAC Address",
+      steps:[
+        "Abra o WinBox no computador.",
+        "Entre na guia <span class='path'>Neighbors</span>.",
+        "Localize o MikroTik pelo MAC Address.",
+        "Clique no equipamento e conecte com o usuário <span class='path'>admin</span>.",
+        "Se o equipamento estiver zerado, a senha poderá estar em branco ou impressa na etiqueta, dependendo do modelo."
+      ]
+    },
+    {
+      title:"Remover a configuração padrão para configurar do zero",
+      steps:[
+        "No primeiro acesso, clique em <span class='path'>Remove Configuration</span>, caso essa opção apareça.",
+        "Se não aparecer, abra <span class='path'>System → Reset Configuration</span>.",
+        "Marque <span class='path'>No Default Configuration</span>.",
+        "Clique em <span class='path'>Reset Configuration</span>.",
+        "Aguarde o reinício e acesse novamente pelo MAC Address."
+      ],
+      note:"Faça isso apenas quando tiver certeza de que não existe uma configuração importante no equipamento."
+    }
+  ]
+},
+{
+  title:"Proteção do acesso administrativo",
+  items:[
+    {
+      title:"Criar um novo usuário administrador",
+      steps:[
+        "Abra <span class='path'>System → Users</span>.",
+        "Clique em <span class='path'>+</span>.",
+        "Crie um nome de usuário diferente de admin.",
+        "Selecione o grupo <span class='path'>full</span>.",
+        "Defina uma senha forte, com letras maiúsculas, minúsculas, números e símbolos.",
+        "Salve e teste o novo usuário antes de remover o usuário antigo."
+      ]
+    },
+    {
+      title:"Desativar ou remover o usuário admin padrão",
+      steps:[
+        "Entre novamente no MikroTik usando o novo usuário.",
+        "Abra <span class='path'>System → Users</span>.",
+        "Selecione o usuário <span class='path'>admin</span>.",
+        "Clique em desativar ou remover.",
+        "Confirme que o novo usuário continua acessando normalmente."
+      ]
+    },
+    {
+      title:"Desativar serviços de gerenciamento desnecessários",
+      steps:[
+        "Abra <span class='path'>IP → Services</span>.",
+        "Desative <span class='path'>telnet</span>.",
+        "Desative <span class='path'>ftp</span>.",
+        "Desative <span class='path'>www</span> se não usar WebFig.",
+        "Desative <span class='path'>www-ssl</span> se não usar WebFig com HTTPS.",
+        "Desative <span class='path'>api</span> e <span class='path'>api-ssl</span> se não houver integração.",
+        "Mantenha apenas <span class='path'>winbox</span> e, se necessário, <span class='path'>ssh</span>."
+      ]
+    },
+    {
+      title:"Restringir WinBox e SSH somente à rede local",
+      steps:[
+        "Abra <span class='path'>IP → Services</span>.",
+        "Abra o serviço <span class='path'>winbox</span>.",
+        "No campo <span class='path'>Available From</span>, informe somente a rede local. Exemplo: <span class='path'>192.168.10.0/24</span>.",
+        "Repita no serviço <span class='path'>ssh</span>, caso ele esteja ativo.",
+        "Não coloque a rede da internet ou <span class='path'>0.0.0.0/0</span>."
+      ]
+    },
+    {
+      title:"Desativar descoberta e acesso por MAC na porta WAN",
+      steps:[
+        "Abra <span class='path'>IP → Neighbors → Discovery Settings</span>.",
+        "Permita descoberta somente na lista de interfaces LAN.",
+        "Abra <span class='path'>Tools → MAC Server</span>.",
+        "Em <span class='path'>Allowed Interface List</span>, escolha apenas a lista LAN.",
+        "Abra a guia <span class='path'>MAC WinBox</span> e também permita somente pela LAN."
+      ]
+    }
+  ]
+},
+{
+  title:"Rede local",
+  items:[
+    {
+      title:"Criar uma bridge para as portas LAN",
+      steps:[
+        "Abra <span class='path'>Bridge</span>.",
+        "Na guia <span class='path'>Bridge</span>, clique em <span class='path'>+</span>.",
+        "Crie a bridge com o nome <span class='path'>bridge-LAN</span>.",
+        "Abra a guia <span class='path'>Ports</span>.",
+        "Adicione uma por uma as portas LAN à bridge.",
+        "Não adicione a porta WAN na bridge."
+      ]
+    },
+    {
+      title:"Criar listas de interfaces WAN e LAN",
+      steps:[
+        "Abra <span class='path'>Interfaces → Interface List</span>.",
+        "Crie a lista <span class='path'>WAN</span>.",
+        "Crie a lista <span class='path'>LAN</span>.",
+        "Na guia <span class='path'>Members</span>, adicione a porta de internet à lista WAN.",
+        "Adicione a <span class='path'>bridge-LAN</span> à lista LAN."
+      ]
+    },
+    {
+      title:"Definir o IP da rede local no MikroTik",
+      steps:[
+        "Abra <span class='path'>IP → Addresses</span>.",
+        "Clique em <span class='path'>+</span>.",
+        "Informe o endereço da rede local. Exemplo: <span class='path'>192.168.10.1/24</span>.",
+        "Em <span class='path'>Interface</span>, selecione <span class='path'>bridge-LAN</span>.",
+        "Salve."
+      ]
+    },
+    {
+      title:"Criar o servidor DHCP da rede local",
+      steps:[
+        "Abra <span class='path'>IP → DHCP Server</span>.",
+        "Clique em <span class='path'>DHCP Setup</span>.",
+        "Selecione <span class='path'>bridge-LAN</span>.",
+        "Confirme a rede, por exemplo <span class='path'>192.168.10.0/24</span>.",
+        "Confirme o gateway <span class='path'>192.168.10.1</span>.",
+        "Defina a faixa de entrega, por exemplo <span class='path'>192.168.10.100-192.168.10.250</span>.",
+        "Informe os servidores DNS.",
+        "Finalize o assistente e renove o IP do computador."
+      ]
+    }
+  ]
+},
+{
+  title:"Conexão com a internet",
+  items:[
+    {
+      title:"Configurar a WAN por DHCP",
+      steps:[
+        "Use esta etapa quando o modem ou roteador do provedor entrega IP automaticamente.",
+        "Abra <span class='path'>IP → DHCP Client</span>.",
+        "Clique em <span class='path'>+</span>.",
+        "Selecione a porta WAN, por exemplo <span class='path'>ether1</span>.",
+        "Deixe <span class='path'>Add Default Route</span> ativado.",
+        "Deixe <span class='path'>Use Peer DNS</span> desativado se você for configurar DNS manualmente.",
+        "Salve e confirme se o status ficou <span class='path'>bound</span>."
+      ],
+      note:"Use esta etapa ou a etapa PPPoE. Normalmente não se usa as duas na mesma porta."
+    },
+    {
+      title:"Configurar a WAN por PPPoE",
+      steps:[
+        "Use esta etapa quando o provedor forneceu usuário e senha PPPoE.",
+        "Abra <span class='path'>PPP</span>.",
+        "Clique em <span class='path'>+</span> e escolha <span class='path'>PPPoE Client</span>.",
+        "Na guia General, selecione a porta WAN.",
+        "Na guia Dial Out, informe usuário e senha.",
+        "Marque <span class='path'>Add Default Route</span>.",
+        "Desmarque <span class='path'>Use Peer DNS</span> se usar DNS manual.",
+        "Salve e confirme se o status ficou conectado.",
+        "Adicione a interface PPPoE à lista WAN."
+      ]
+    },
+    {
+      title:"Configurar os servidores DNS",
+      steps:[
+        "Abra <span class='path'>IP → DNS</span>.",
+        "Informe servidores confiáveis, por exemplo <span class='path'>1.1.1.1</span> e <span class='path'>8.8.8.8</span>.",
+        "Ative <span class='path'>Allow Remote Requests</span> para que os clientes da LAN usem o MikroTik como DNS.",
+        "Nunca permita consultas DNS vindas da WAN.",
+        "Salve."
+      ]
+    },
+    {
+      title:"Criar a regra de NAT para a rede navegar",
+      steps:[
+        "Abra <span class='path'>IP → Firewall → NAT</span>.",
+        "Clique em <span class='path'>+</span>.",
+        "Em Chain, escolha <span class='path'>srcnat</span>.",
+        "Em Out. Interface List, escolha <span class='path'>WAN</span>.",
+        "Na guia Action, escolha <span class='path'>masquerade</span>.",
+        "Salve."
+      ]
+    }
+  ]
+},
+{
+  title:"Firewall e endurecimento",
+  items:[
+    {
+      title:"Permitir conexões estabelecidas e relacionadas no INPUT",
+      steps:[
+        "Abra <span class='path'>IP → Firewall → Filter Rules</span>.",
+        "Crie uma regra com Chain <span class='path'>input</span>.",
+        "Em Connection State, marque <span class='path'>established</span> e <span class='path'>related</span>.",
+        "Em Action, escolha <span class='path'>accept</span>.",
+        "Mova essa regra para o início da lista."
+      ]
+    },
+    {
+      title:"Descartar conexões inválidas no INPUT",
+      steps:[
+        "Crie uma regra com Chain <span class='path'>input</span>.",
+        "Em Connection State, marque <span class='path'>invalid</span>.",
+        "Em Action, escolha <span class='path'>drop</span>.",
+        "Coloque a regra logo abaixo da regra de established/related."
+      ]
+    },
+    {
+      title:"Permitir ICMP para diagnóstico",
+      steps:[
+        "Crie uma regra com Chain <span class='path'>input</span>.",
+        "Em Protocol, escolha <span class='path'>icmp</span>.",
+        "Em Action, escolha <span class='path'>accept</span>.",
+        "Essa regra permite testes de ping e mensagens necessárias ao funcionamento da rede."
+      ]
+    },
+    {
+      title:"Permitir acesso ao roteador somente pela LAN",
+      steps:[
+        "Crie uma regra com Chain <span class='path'>input</span>.",
+        "Em In. Interface List, escolha <span class='path'>LAN</span>.",
+        "Em Action, escolha <span class='path'>accept</span>.",
+        "Coloque essa regra antes da regra final de bloqueio."
+      ]
+    },
+    {
+      title:"Bloquear todo o restante que chegar ao roteador",
+      steps:[
+        "Crie uma regra com Chain <span class='path'>input</span>.",
+        "Em In. Interface List, escolha <span class='path'>!LAN</span>, ou crie uma regra final sem interface específica.",
+        "Em Action, escolha <span class='path'>drop</span>.",
+        "Mantenha essa regra por último na cadeia INPUT.",
+        "Antes de ativar, confirme que a regra de acesso pela LAN está acima dela."
+      ],
+      note:"Ative o Safe Mode no WinBox antes de mexer no firewall para evitar perder o acesso."
+    },
+    {
+      title:"Proteger o encaminhamento entre LAN e internet",
+      steps:[
+        "Na cadeia <span class='path'>forward</span>, permita conexões <span class='path'>established</span> e <span class='path'>related</span>.",
+        "Descarte conexões <span class='path'>invalid</span>.",
+        "Permita tráfego iniciado pela LAN com destino à WAN.",
+        "Permita conexões de entrada somente quando forem resultado de uma regra de dst-nat válida.",
+        "Crie uma regra final descartando novas conexões vindas da WAN que não sejam dst-nat."
+      ]
+    },
+    {
+      title:"Desativar UPnP, Proxy e SOCKS",
+      steps:[
+        "Abra <span class='path'>IP → UPnP</span> e mantenha desativado, salvo necessidade específica.",
+        "Abra <span class='path'>IP → Web Proxy</span> e confirme que está desativado.",
+        "Abra <span class='path'>IP → SOCKS</span> e confirme que está desativado.",
+        "Não ative esses serviços apenas para testes sem entender o impacto."
+      ]
+    },
+    {
+      title:"Desativar serviços auxiliares não utilizados",
+      steps:[
+        "Abra <span class='path'>IP → Cloud</span> e desative DDNS se não for usar.",
+        "Abra <span class='path'>IP → SNMP</span> e mantenha desativado se não houver monitoramento.",
+        "Abra <span class='path'>Routing → BFD</span> e outros protocolos dinâmicos apenas se forem realmente necessários.",
+        "Evite manter recursos ativos sem uso."
+      ]
+    }
+  ]
+},
+{
+  title:"Ajustes finais",
+  items:[
+    {
+      title:"Configurar nome do equipamento, data e horário",
+      steps:[
+        "Abra <span class='path'>System → Identity</span> e defina um nome identificável.",
+        "Abra <span class='path'>System → Clock</span> e escolha o fuso correto.",
+        "Abra <span class='path'>System → NTP Client</span>.",
+        "Ative o NTP e informe servidores de horário.",
+        "Confirme que a data e a hora ficaram corretas."
+      ]
+    },
+    {
+      title:"Atualizar o RouterOS e o firmware da RouterBOARD",
+      steps:[
+        "Abra <span class='path'>System → Packages</span>.",
+        "Clique em <span class='path'>Check for Updates</span>.",
+        "Use o canal estável.",
+        "Atualize e aguarde o reinício.",
+        "Depois, abra <span class='path'>System → RouterBOARD</span>.",
+        "Clique em <span class='path'>Upgrade</span> e reinicie novamente.",
+        "Confirme se Current Firmware e Upgrade Firmware ficaram iguais."
+      ],
+      note:"Faça a atualização em uma janela segura, pois o equipamento será reiniciado."
+    },
+    {
+      title:"Testar IP, gateway, DNS e navegação",
+      steps:[
+        "No MikroTik, abra <span class='path'>New Terminal</span>.",
+        "Teste o gateway do provedor.",
+        "Teste <span class='path'>ping 8.8.8.8</span>.",
+        "Teste <span class='path'>ping google.com</span>.",
+        "No computador, confirme que recebeu IP, gateway e DNS.",
+        "Abra alguns sites e teste a estabilidade da conexão."
+      ]
+    },
+    {
+      title:"Criar backup e exportar a configuração",
+      steps:[
+        "Abra <span class='path'>Files</span>.",
+        "Clique em <span class='path'>Backup</span>.",
+        "Defina um nome e uma senha para o arquivo de backup.",
+        "Abra o Terminal e execute uma exportação com dados sensíveis ocultos.",
+        "Baixe o arquivo de backup e o arquivo de exportação para um local seguro.",
+        "Identifique os arquivos com nome do cliente e data."
+      ],
+      note:"O backup binário é melhor para restaurar no mesmo equipamento. A exportação em texto é melhor para consulta e reconstrução."
+    }
+  ]
+}
+];
+
+const checklist = document.getElementById("checklist");
+const state = JSON.parse(localStorage.getItem("mikrotikChecklistState") || "{}");
+
+function render(){
+  let index = 0;
+  sections.forEach(section=>{
+    const sectionTitle = document.createElement("div");
+    sectionTitle.className = "section-title";
+    sectionTitle.textContent = section.title;
+    checklist.appendChild(sectionTitle);
+
+    section.items.forEach(item=>{
+      const id = "item-" + index++;
+      const wrapper = document.createElement("div");
+      wrapper.className = "item" + (state[id] ? " done" : "");
+
+      const head = document.createElement("div");
+      head.className = "item-head";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "check";
+      checkbox.checked = !!state[id];
+      checkbox.setAttribute("aria-label", item.title);
+      checkbox.addEventListener("change", ()=>{
+        state[id] = checkbox.checked;
+        wrapper.classList.toggle("done", checkbox.checked);
+        save();
+        updateProgress();
+      });
+
+      const title = document.createElement("div");
+      title.className = "item-title";
+      title.textContent = item.title;
+
+      const toggle = document.createElement("button");
+      toggle.className = "toggle";
+      toggle.textContent = "Ver passo a passo";
+
+      const details = document.createElement("div");
+      details.className = "details";
+      const list = document.createElement("ol");
+      item.steps.forEach(step=>{
+        const li = document.createElement("li");
+        li.innerHTML = step;
+        list.appendChild(li);
+      });
+      details.appendChild(list);
+
+      if(item.note){
+        const note = document.createElement("div");
+        note.className = "note";
+        note.textContent = item.note;
+        details.appendChild(note);
+      }
+
+      toggle.addEventListener("click", ()=>{
+        const open = details.classList.toggle("open");
+        toggle.textContent = open ? "Ocultar" : "Ver passo a passo";
+      });
+
+      head.appendChild(checkbox);
+      head.appendChild(title);
+      head.appendChild(toggle);
+      wrapper.appendChild(head);
+      wrapper.appendChild(details);
+      checklist.appendChild(wrapper);
+    });
+  });
+  updateProgress();
+}
+
+function save(){
+  localStorage.setItem("mikrotikChecklistState", JSON.stringify(state));
+}
+
+function updateProgress(){
+  const checks = [...document.querySelectorAll(".check")];
+  const completed = checks.filter(c=>c.checked).length;
+  const total = checks.length;
+  const percent = total ? Math.round((completed/total)*100) : 0;
+  document.getElementById("percent").textContent = percent + "%";
+  document.getElementById("bar").style.width = percent + "%";
+  document.getElementById("counter").textContent = `${completed} de ${total} etapas concluídas`;
+}
+
+function expandAll(){
+  document.querySelectorAll(".details").forEach(d=>d.classList.add("open"));
+  document.querySelectorAll(".toggle").forEach(b=>b.textContent="Ocultar");
+}
+
+function collapseAll(){
+  document.querySelectorAll(".details").forEach(d=>d.classList.remove("open"));
+  document.querySelectorAll(".toggle").forEach(b=>b.textContent="Ver passo a passo");
+}
+
+function resetChecklist(){
+  if(!confirm("Deseja realmente apagar todo o progresso?")) return;
+  Object.keys(state).forEach(k=>delete state[k]);
+  localStorage.removeItem("mikrotikChecklistState");
+  document.querySelectorAll(".check").forEach(c=>c.checked=false);
+  document.querySelectorAll(".item").forEach(i=>i.classList.remove("done"));
+  updateProgress();
+}
+
+render();
+</script>
+</body>
+</html>
