@@ -438,22 +438,13 @@ const sections = [
       ]
     },
     {
-      title:"Permitir acesso ao roteador somente pela LAN",
-      steps:[
-        "Crie uma regra com Chain <span class='path'>input</span>.",
-        "Em In. Interface List, escolha <span class='path'>LAN</span>.",
-        "Em Action, escolha <span class='path'>accept</span>.",
-        "Coloque essa regra antes da regra final de bloqueio."
-      ]
-    },
-    {
       title:"Bloquear todo o restante que chegar ao roteador",
       steps:[
         "Crie uma regra com Chain <span class='path'>input</span>.",
         "Em In. Interface List, escolha <span class='path'>!LAN</span>, ou crie uma regra final sem interface específica.",
         "Em Action, escolha <span class='path'>drop</span>.",
         "Mantenha essa regra por último na cadeia INPUT.",
-        "Antes de ativar, confirme que a regra de acesso pela LAN está acima dela."
+        "Antes de ativar, confirme que todas as regras necessárias de acesso e gerenciamento estão acima dela."
       ],
       note:"Ative o Safe Mode no WinBox antes de mexer no firewall para evitar perder o acesso."
     },
@@ -468,13 +459,22 @@ const sections = [
       ]
     },
     {
-      title:"Desativar UPnP, Proxy e SOCKS",
+      title:"Criar acesso externo com IP fixo (caso tenha)",
       steps:[
-        "Abra <span class='path'>IP → UPnP</span> e mantenha desativado, salvo necessidade específica.",
-        "Abra <span class='path'>IP → Web Proxy</span> e confirme que está desativado.",
-        "Abra <span class='path'>IP → SOCKS</span> e confirme que está desativado.",
-        "Não ative esses serviços apenas para testes sem entender o impacto."
-      ]
+        "Confirme com o provedor se o link possui um <span class='path'>IP público fixo</span>. IP fixo interno ou IP de CGNAT não permite acesso externo direto.",
+        "Abra <span class='path'>IP → Addresses</span> ou verifique o endereço recebido na interface WAN e anote o IP público.",
+        "Compare o IP da WAN com o IP mostrado em um site de consulta. Se forem diferentes, confirme com o provedor se existe CGNAT.",
+        "Defina um IP fixo para o equipamento interno que será acessado, usando endereço manual ou uma reserva em <span class='path'>IP → DHCP Server → Leases → Make Static</span>.",
+        "Anote o IP interno, o protocolo e a porta do equipamento. Exemplo: DVR <span class='path'>192.168.10.20</span>, porta externa <span class='path'>8000</span>, protocolo <span class='path'>TCP</span>.",
+        "Abra <span class='path'>IP → Firewall → NAT</span> e clique em <span class='path'>+</span>.",
+        "Na guia General, selecione Chain <span class='path'>dstnat</span>, protocolo TCP ou UDP, informe o IP público no campo <span class='path'>Dst. Address</span> se necessário e coloque a porta externa em <span class='path'>Dst. Port</span>.",
+        "Na guia Action, escolha <span class='path'>dst-nat</span>, informe o IP interno em <span class='path'>To Addresses</span> e a porta interna em <span class='path'>To Ports</span>.",
+        "Confirme que o firewall da cadeia <span class='path'>forward</span> permite conexões marcadas como <span class='path'>dstnat</span>. Evite liberar portas diretamente na cadeia INPUT quando o destino for um DVR, câmera, servidor ou outro equipamento da LAN.",
+        "Teste usando o 4G ou 5G do celular, fora do Wi-Fi do cliente. Não use apenas um teste feito dentro da mesma rede.",
+        "Caso precise acessar pelo mesmo endereço público estando dentro da LAN, configure NAT Loopback somente depois de confirmar que o acesso externo já funciona.",
+        "Registre o IP público, porta externa, porta interna, protocolo, equipamento e data da configuração."
+      ],
+      note:"Abra somente as portas necessárias e prefira VPN para serviços administrativos. Nunca exponha WinBox, SSH, câmeras ou servidores sem restrição de origem e senha forte."
     },
     {
       title:"Desativar serviços auxiliares não utilizados",
